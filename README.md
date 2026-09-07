@@ -6,9 +6,7 @@ Die PC-Anwendung sendet Ausdrücke der Form `Zahl Operator Zahl`, die Firmware
 wertet sie aus und antwortet. Der gesamte Nachrichtenaustausch wird auf dem PC
 protokolliert.
 
-Portfolio zum Kurs *Programmierung mit C/C++ (DLBROEPRS01_D)*, IU Internationale
-Hochschule.
-Hochschule.
+Studienprojekt.
 
 ## Aufbau
 
@@ -24,6 +22,14 @@ Hochschule.
 Unit-Tests verwendet. Dadurch gibt es die Rechenlogik nur einmal, und sie ist
 ohne Hardware prüfbar.
 
+## Voraussetzungen
+
+Die PC-Anwendung und der Simulator nutzen POSIX-Schnittstellen (`termios`,
+PTY). Sie laufen unter Linux und macOS, nicht unter Windows.
+
+Gerechnet wird ausschließlich mit vorzeichenbehafteten 32-Bit-Ganzzahlen.
+Die Division ist daher ganzzahlig: `100 / 7` ergibt `14`.
+
 ## Übersetzen und testen
 
 ```bash
@@ -31,8 +37,15 @@ make test        # alle Unit-Tests (59: 41 Kern, 18 PC-Module)
 make pc          # PC-Anwendung  -> build/uc-calc-pc
 make sim         # Simulator     -> build/uc-calc-sim
 make firmware    # Firmware      -> build/uc-calc.hex   (benötigt avr-gcc)
-make flash PORT=/dev/ttyACM0     # Übertragen           (benötigt avrdude)
+make flash PORT=<Port>           # Übertragen           (benötigt avrdude)
 ```
+
+## Portnamen
+
+| System | typischer Port |
+|---|---|
+| Linux | `/dev/ttyACM0`, teils `/dev/ttyUSB0` |
+| macOS | `/dev/cu.usbmodem…` |
 
 ## Systemtest ohne Hardware
 
@@ -56,6 +69,9 @@ make flash PORT=/dev/ttyACM0
 
 Die Kommandos sind dieselben wie im Simulator.
 
+Im interaktiven Betrieb beenden `quit` und `exit` das Programm. Beide werden
+lokal ausgewertet und nicht an den Mikrocontroller gesendet.
+
 ## Protokoll
 
 | Richtung | Beispiel |
@@ -76,7 +92,5 @@ Definierte Fehlerfälle: `syntax error`, `unknown operator`, `value out of range
 ## Hinweis zu Umlauten im Quelltext
 
 Die Quelltextkommentare verzichten bewusst auf Umlaute und verwenden
-Umschreibungen (`ae`, `oe`, `ue`, `ss`). Damit bleiben die Dateien unabhängig
-von der Zeichensatzeinstellung des jeweiligen Editors oder Compilers lesbar —
-eine in eingebetteten Projekten übliche Konvention. Dokumentation und
-Diagramme verwenden dagegen korrekte deutsche Rechtschreibung.
+Umschreibungen (`ae`, `oe`, `ue`, `ss`), damit die Dateien unabhängig von der
+Zeichensatzeinstellung des Editors lesbar bleiben.
