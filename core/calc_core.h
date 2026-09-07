@@ -1,14 +1,9 @@
 /*
- * calc_core.h - Gemeinsamer Rechenkern des Mikrocontroller-Kalkulators.
+ * calc_core.h - Gemeinsamer Rechenkern (C99).
  *
- * Dieses Modul ist bewusst frei von Hardware- und Betriebssystembezuegen.
- * Es wird unveraendert von drei Zielen verwendet:
- *   - der Firmware auf dem ATmega328P,
- *   - dem PC-seitigen Simulator,
- *   - den Unit-Tests.
- *
- * Es verwendet keinen dynamischen Speicher und keine Gleitkommaarithmetik.
- * Sprachstand: C99.
+ * Frei von Hardware- und Betriebssystembezuegen, damit Firmware, Simulator
+ * und Unit-Tests dieselbe Datei verwenden koennen.
+ * Kein dynamischer Speicher, kein Gleitkomma.
  */
 
 #ifndef CALC_CORE_H

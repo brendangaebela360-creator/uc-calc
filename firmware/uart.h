@@ -1,13 +1,9 @@
 /*
- * uart.h - Registernaher UART-Treiber fuer den ATmega328P.
+ * uart.h - Registernaher UART-Treiber fuer den ATmega328P (USART0).
  *
- * Der Treiber kommt ohne Arduino-Bibliotheken aus und spricht den USART0
- * direkt ueber die Register UBRR0, UCSR0A, UCSR0B und UCSR0C an.
- *
- * Empfangen wird interruptgesteuert (RXCIE0) in einen Ringpuffer, damit
- * waehrend der Auswertung eines Ausdrucks keine Zeichen verloren gehen.
- * Gesendet wird blockierend, da die Antwortzeilen kurz sind und die
- * Hauptschleife ohnehin auf die naechste Anfrage wartet.
+ * Ohne Arduino-Bibliotheken. Empfang interruptgesteuert (RXCIE0) in einen
+ * Ringpuffer, damit waehrend der Auswertung keine Zeichen verloren gehen.
+ * Senden blockierend - die Antwortzeilen sind kurz.
  */
 
 #ifndef UART_H
@@ -15,13 +11,10 @@
 
 #include <stdint.h>
 
-/* Groesse des Empfangsringpuffers. Muss eine Zweierpotenz sein, damit die
- * Indexberechnung ohne Modulo-Division auskommt. */
+/* Zweierpotenz, damit die Indexberechnung ohne Modulo auskommt. */
 #define UART_RX_BUFFER_SIZE 32
 
-/* Initialisiert USART0 auf 9600 Baud, 8N1, und schaltet den
- * Empfangsinterrupt frei. Der globale Interruptfreigabe-Aufruf sei()
- * bleibt Aufgabe des Aufrufers. */
+/* 9600 Baud, 8N1, Empfangsinterrupt frei. sei() macht der Aufrufer. */
 void uart_init(void);
 
 /* Holt ein Zeichen aus dem Ringpuffer.
@@ -34,12 +27,10 @@ void uart_put(char c);
 /* Sendet eine nullterminierte Zeichenkette. */
 void uart_write(const char *s);
 
-/* Sendet eine Zeichenkette und schliesst sie mit "\r\n" ab, damit die
- * Ausgabe auch in Terminalprogrammen unter Windows sauber umbricht. */
+/* Sendet die Zeichenkette und schliesst mit "\r\n" ab. */
 void uart_write_line(const char *s);
 
-/* Meldet, ob der Ringpuffer seit dem letzten Aufruf uebergelaufen ist.
- * Der Zaehler wird beim Lesen zurueckgesetzt. */
+/* Meldet einen Ringpufferueberlauf und setzt das Kennzeichen zurueck. */
 uint8_t uart_overflow(void);
 
 #endif /* UART_H */

@@ -30,7 +30,7 @@ unsigned SerialPort::toBaudConstant(unsigned baud)
 SerialPort::SerialPort(const std::string& device, unsigned baud)
     : device_(device)
 {
-    /* O_NOCTTY: Der Port soll nicht zum steuernden Terminal werden. */
+    /* O_NOCTTY: kein steuerndes Terminal. */
     fd_ = ::open(device.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd_ < 0) {
         throw std::runtime_error("Port " + device + " nicht zu oeffnen: " +
@@ -44,7 +44,7 @@ SerialPort::SerialPort(const std::string& device, unsigned baud)
                                  std::string(std::strerror(errno)));
     }
 
-    ::cfmakeraw(&tty);                       /* keine Zeichenumsetzung   */
+    ::cfmakeraw(&tty);                       /* keine Zeichenumsetzung */
     const unsigned speed = toBaudConstant(baud);
     ::cfsetispeed(&tty, speed);
     ::cfsetospeed(&tty, speed);
@@ -120,7 +120,7 @@ std::optional<std::string> SerialPort::readLine(std::chrono::milliseconds timeou
     const auto deadline = std::chrono::steady_clock::now() + timeout;
 
     for (;;) {
-        /* Liegt bereits eine vollstaendige Zeile im Zwischenpuffer? */
+        /* Schon eine vollstaendige Zeile im Zwischenpuffer? */
         const auto pos = pending_.find('\n');
         if (pos != std::string::npos) {
             std::string line = pending_.substr(0, pos);

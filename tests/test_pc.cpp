@@ -1,10 +1,8 @@
 /*
- * test_pc.cpp - Unit-Tests der Module der PC-Anwendung.
+ * test_pc.cpp - Unit-Tests von SerialPort und MessageLog.
  *
- * Geprueft werden SerialPort und MessageLog einzeln, also unabhaengig vom
- * Gesamtsystem. SerialPort wird dazu gegen ein virtuelles Terminalpaar
- * betrieben: Der Test uebernimmt die Master-Seite und verhaelt sich wie der
- * Mikrocontroller, waehrend die zu pruefende Klasse die Slave-Seite oeffnet.
+ * SerialPort wird gegen ein virtuelles Terminalpaar betrieben: Der Test
+ * uebernimmt die Master-Seite und verhaelt sich wie der Mikrocontroller.
  */
 
 #define _XOPEN_SOURCE 600
@@ -38,8 +36,7 @@ void check(bool condition, const std::string& name)
     }
 }
 
-/* Legt ein virtuelles Terminalpaar an und liefert Master-Deskriptor und
- * Geraetenamen der Slave-Seite. */
+/* Liefert Master-Deskriptor und Geraetenamen der Slave-Seite. */
 bool makePty(int& master, std::string& slaveName)
 {
     master = ::posix_openpt(O_RDWR | O_NOCTTY | O_NONBLOCK);
@@ -53,7 +50,7 @@ bool makePty(int& master, std::string& slaveName)
     }
     slaveName = name;
 
-    /* Rohmodus, damit das Terminal keine Zeichen zurueckwirft. */
+    /* Rohmodus, sonst Echo. */
     termios tty{};
     if (::tcgetattr(master, &tty) == 0) {
         ::cfmakeraw(&tty);
@@ -174,7 +171,7 @@ std::vector<std::string> readLines(const std::string& path)
     return lines;
 }
 
-/* Prueft das Muster JJJJ-MM-TTTHH:MM:SS.mmm am Zeilenanfang. */
+/* Muster JJJJ-MM-TTTHH:MM:SS.mmm am Zeilenanfang. */
 bool hasTimestamp(const std::string& line)
 {
     if (line.size() < 23) {
@@ -204,7 +201,7 @@ void testMessageLog()
         log.log(MessageLog::Direction::Sent, "34 * 72");
         log.log(MessageLog::Direction::Received, "34 * 72 = 2448");
         log.note("Zeitueberschreitung nach Anfrage: 5 / 0");
-    }   /* Destruktor schliesst die Datei */
+    }   /* Destruktor schliesst */
 
     const auto lines = readLines(path);
 

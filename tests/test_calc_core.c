@@ -1,10 +1,5 @@
 /*
- * test_calc_core.c - Unit-Tests des Rechenkerns.
- *
- * Die Tests kommen ohne Fremdbibliothek aus, damit sie auf jedem System
- * mit einem C-Compiler laufen. Geprueft werden die Grundrechenarten, die
- * Toleranz gegenueber Leerraum, alle definierten Fehlerfaelle sowie die
- * Grenzen des Wertebereichs.
+ * test_calc_core.c - Unit-Tests des Rechenkerns, ohne Fremdbibliothek.
  */
 
 #include <stdio.h>
@@ -15,7 +10,7 @@
 static int tests_run    = 0;
 static int tests_failed = 0;
 
-/* Prueft, dass ein Ausdruck gueltig ist und das erwartete Ergebnis liefert. */
+/* Erwartet CALC_OK und einen bestimmten Wert. */
 static void expect_value(const char *expr, int32_t expected)
 {
     int32_t       result = 0;
@@ -29,7 +24,7 @@ static void expect_value(const char *expr, int32_t expected)
     }
 }
 
-/* Prueft, dass ein Ausdruck genau den erwarteten Fehler ausloest. */
+/* Erwartet genau diesen Fehlercode. */
 static void expect_error(const char *expr, calc_status_t expected)
 {
     int32_t       result = 0;
@@ -43,7 +38,7 @@ static void expect_error(const char *expr, calc_status_t expected)
     }
 }
 
-/* Prueft die erzeugte Antwortzeile. */
+/* Erwartet diese Antwortzeile. */
 static void expect_answer(const char *expr, const char *expected)
 {
     char          answer[CALC_ANSWER_MAX];

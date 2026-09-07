@@ -1,17 +1,10 @@
 /*
  * main.c - Hauptprogramm der Mikrocontroller-Anwendung.
  *
- * Ablauf: Nach dem Zuruecksetzen sendet die Firmware die Begruessungszeile
- * "READY uc-calc 1.0". Die PC-Anwendung wartet auf diese Zeile, bevor sie
- * die erste Anfrage stellt; damit ist der durch das DTR-Signal ausgeloeste
- * Reset des Boards beim Oeffnen des Ports abgefangen.
- *
- * Danach laeuft dauerhaft die Schleife Empfangen - Auswerten - Senden.
- * Die Zeilenerkennung arbeitet als kleiner Zustandsautomat: Zeichen werden
- * gesammelt, bis ein Zeilenende eintrifft. Ueberschreitet eine Zeile den
- * Puffer, wechselt der Automat in den Verwerfen-Zustand und antwortet nach
- * dem Zeilenende mit "ERR: line too long". So kann der Puffer unabhaengig
- * von der Eingabe nie ueberlaufen.
+ * Die READY-Zeile nach dem Start faengt den DTR-Reset beim Oeffnen des Ports
+ * ab. Danach Schleife Empfangen - Auswerten - Senden. Die Zeilenerkennung ist
+ * ein Zustandsautomat (COLLECT/DISCARD); zu lange Zeilen werden verworfen und
+ * mit "ERR: line too long" beantwortet, damit der Puffer nie ueberlaeuft.
  */
 
 #include <avr/interrupt.h>
@@ -19,8 +12,7 @@
 #include "uart.h"
 #include "../core/calc_core.h"
 
-/* Begruessungszeile; die Versionsangabe erlaubt es der PC-Anwendung,
- * spaeter zwischen Firmwarestaenden zu unterscheiden. */
+/* Versionsangabe, damit die PC-Seite Firmwarestaende unterscheiden kann. */
 #define GREETING "READY uc-calc 1.0"
 
 /* Zustaende der Zeilenerkennung. */
@@ -82,9 +74,7 @@ int main(void)
 
         uart_write_line(answer);
 
-        /* Ein Ueberlauf des Ringpuffers waere ein Hinweis darauf, dass der
-         * PC schneller sendet als die Firmware auswertet. Er wird gemeldet,
-         * damit das Verhalten nicht unbemerkt bleibt. */
+        /* Ueberlauf melden, statt den Verlust unbemerkt zu lassen. */
         if (uart_overflow()) {
             uart_write_line("ERR: receive buffer overflow");
         }

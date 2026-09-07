@@ -1,11 +1,9 @@
 /*
- * SerialPort.h - Kapselung der seriellen Schnittstelle (POSIX/termios).
+ * SerialPort.h - Serielle Schnittstelle (POSIX/termios).
  *
- * Die Klasse folgt dem RAII-Prinzip: Der Konstruktor oeffnet und
- * konfiguriert den Port, der Destruktor schliesst ihn in jedem Fall -
- * auch dann, wenn die Ablaufsteuerung durch eine Ausnahme verlassen wird.
- * Kopieren ist unterbunden, Verschieben erlaubt, damit ein Dateideskriptor
- * nicht versehentlich doppelt geschlossen wird.
+ * RAII: Konstruktor oeffnet und konfiguriert, Destruktor schliesst - auch
+ * bei einer Ausnahme. Kopieren unterbunden, Verschieben erlaubt, damit ein
+ * Dateideskriptor nicht doppelt geschlossen wird.
  */
 
 #ifndef SERIALPORT_H
@@ -17,8 +15,7 @@
 
 class SerialPort {
 public:
-    /* Oeffnet den Port und stellt ihn auf 9600 Baud, 8N1, ohne Fluss-
-     * steuerung ein. Wirft std::runtime_error, wenn das misslingt. */
+    /* 9600 Baud, 8N1, ohne Flusssteuerung. Wirft std::runtime_error. */
     SerialPort(const std::string& device, unsigned baud = 9600);
     ~SerialPort();
 
@@ -30,8 +27,7 @@ public:
     /* Sendet die Zeichenkette und haengt "\n" an. */
     void writeLine(const std::string& line);
 
-    /* Liest bis zum naechsten Zeilenende. Liefert std::nullopt, wenn
-     * innerhalb des Zeitfensters keine vollstaendige Zeile eintraf. */
+    /* Liest bis zum Zeilenende; std::nullopt bei Zeitablauf. */
     std::optional<std::string> readLine(std::chrono::milliseconds timeout);
 
     const std::string& device() const { return device_; }

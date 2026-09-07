@@ -1,16 +1,10 @@
 /*
  * MessageLog.h - Protokollierung des Nachrichtenaustauschs.
  *
- * Jede gesendete und jede empfangene Zeile wird mit Zeitstempel und
- * Richtungskennung in eine Textdatei geschrieben. Format einer Zeile:
- *
+ * Eine Zeile je Nachricht: Zeitstempel, Richtung (TX/RX), Text, z. B.
  *     2026-08-12T14:21:07.412 TX 34 * 72
- *     2026-08-12T14:21:07.485 RX 34 * 72 = 2448
- *
- * Auch diese Klasse folgt dem RAII-Prinzip: Der Konstruktor oeffnet die
- * Datei, der Destruktor schliesst sie. Nach jedem Eintrag wird der Puffer
- * geleert, damit das Protokoll auch bei einem Programmabbruch vollstaendig
- * auf der Platte liegt.
+ * RAII wie bei SerialPort. Nach jedem Eintrag wird geflusht, damit das
+ * Protokoll auch bei einem Abbruch vollstaendig vorliegt.
  */
 
 #ifndef MESSAGELOG_H
@@ -31,7 +25,7 @@ public:
 
     void log(Direction direction, const std::string& message);
 
-    /* Vermerkt ein Ereignis ohne Nachrichtenbezug, etwa einen Zeitablauf. */
+    /* Ereignis ohne Nachrichtenbezug, etwa ein Zeitablauf. */
     void note(const std::string& text);
 
 private:

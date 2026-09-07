@@ -1,22 +1,15 @@
 /*
- * calc_core.c - Implementierung des gemeinsamen Rechenkerns.
+ * calc_core.c - Implementierung des Rechenkerns.
  *
- * Entwurfsentscheidungen:
- *   - Kein dynamischer Speicher: alle Puffer werden vom Aufrufer gestellt.
- *   - Keine Gleitkommaarithmetik: der ATmega328P besitzt keine FPU.
- *   - Keine stdio-Funktionen: snprintf() der avr-libc belegt mehrere
- *     Kilobyte Programmspeicher. Die Zahlenausgabe erfolgt daher ueber
- *     eine eigene, knapp gehaltene Umwandlungsroutine.
- *   - Alle Bereichsueberschreitungen werden vor der Rechnung geprueft.
- *     Ein vorzeichenbehafteter Ueberlauf waere undefiniertes Verhalten
- *     und darf deshalb nicht erst nachtraeglich erkannt werden.
+ * Kein malloc (Puffer stellt der Aufrufer), kein Gleitkomma (keine FPU),
+ * kein snprintf (belegt auf dem AVR mehrere Kilobyte) - daher eine eigene
+ * Zahlenumwandlung. Bereichspruefungen laufen vor der Operation, weil
+ * vorzeichenbehafteter Ueberlauf undefiniertes Verhalten waere.
  */
 
 #include "calc_core.h"
 
-/* ------------------------------------------------------------------ */
-/* Kleine Hilfsfunktionen                                              */
-/* ------------------------------------------------------------------ */
+/* --- Hilfsfunktionen --- */
 
 static int is_space(char c)
 {
@@ -35,7 +28,7 @@ static void skip_spaces(const char **pp)
     }
 }
 
-/* Laenge einer nullterminierten Zeichenkette, ohne <string.h>. */
+/* Ohne <string.h>. */
 static size_t str_len(const char *s)
 {
     size_t n = 0;
@@ -45,15 +38,10 @@ static size_t str_len(const char *s)
     return n;
 }
 
-/* ------------------------------------------------------------------ */
-/* Zahlenumwandlung                                                    */
-/* ------------------------------------------------------------------ */
+/* --- Zahlenumwandlung --- */
 
-/*
- * Liest eine vorzeichenbehaftete Dezimalzahl und setzt den Lesezeiger
- * hinter die letzte gelesene Ziffer. Der Betrag wird waehrend des Lesens
- * gegen die Grenze geprueft, sodass kein Ueberlauf entstehen kann.
- */
+/* Liest eine Dezimalzahl und setzt den Lesezeiger dahinter. Der Betrag wird
+ * waehrend des Lesens gegen die Grenze geprueft. */
 static calc_status_t parse_int(const char **pp, int32_t *out)
 {
     const char *p = *pp;
@@ -69,7 +57,7 @@ static calc_status_t parse_int(const char **pp, int32_t *out)
         p++;
     }
 
-    /* Der darstellbare Betrag ist bei negativen Zahlen um eins groesser. */
+    /* Negativer Bereich reicht um eins weiter. */
     limit = negative ? 2147483648u : 2147483647u;
 
     while (is_digit(*p)) {
@@ -87,8 +75,7 @@ static calc_status_t parse_int(const char **pp, int32_t *out)
     }
 
     if (negative) {
-        /* 2147483648 laesst sich nicht als positiver int32_t darstellen
-         * und wird deshalb gesondert behandelt. */
+        /* 2147483648 ist als positiver int32_t nicht darstellbar. */
         *out = (magnitude == 2147483648u)
                    ? (-2147483647 - 1)
                    : -(int32_t)magnitude;
@@ -100,10 +87,7 @@ static calc_status_t parse_int(const char **pp, int32_t *out)
     return CALC_OK;
 }
 
-/*
- * Haengt eine vorzeichenbehaftete Zahl an einen Puffer an.
- * Gibt die Anzahl der geschriebenen Zeichen zurueck.
- */
+/* Haengt eine Zahl an den Puffer an, liefert die neue Schreibposition. */
 static size_t append_int(char *out, size_t out_sz, size_t pos, int32_t value)
 {
     char tmp[11];               /* -2147483648 benoetigt 11 Zeichen */
@@ -111,7 +95,7 @@ static size_t append_int(char *out, size_t out_sz, size_t pos, int32_t value)
     uint32_t magnitude;
 
     if (value < 0) {
-        /* Der Betrag wird unsigned gebildet, damit INT32_MIN korrekt ist. */
+        /* Betrag unsigned bilden, sonst kippt INT32_MIN. */
         magnitude = (uint32_t)(-(value + 1)) + 1u;
         if (pos + 1 < out_sz) {
             out[pos++] = '-';
@@ -132,9 +116,7 @@ static size_t append_int(char *out, size_t out_sz, size_t pos, int32_t value)
     return pos;
 }
 
-/* ------------------------------------------------------------------ */
-/* Arithmetik mit vorgelagerter Bereichspruefung                       */
-/* ------------------------------------------------------------------ */
+/* --- Arithmetik mit vorgelagerter Bereichspruefung --- */
 
 #define CALC_INT32_MAX  2147483647
 #define CALC_INT32_MIN  (-2147483647 - 1)
@@ -166,7 +148,7 @@ static calc_status_t apply_op(char op, int32_t a, int32_t b, int32_t *out)
 
     case '/':
         if (b == 0) return CALC_ERR_DIV_ZERO;
-        /* Der einzige Ueberlauf der Division. */
+        /* INT32_MIN / -1 ist der einzige Ueberlauf der Division. */
         if (a == CALC_INT32_MIN && b == -1) return CALC_ERR_RANGE;
         *out = a / b;
         return CALC_OK;
@@ -176,9 +158,7 @@ static calc_status_t apply_op(char op, int32_t a, int32_t b, int32_t *out)
     }
 }
 
-/* ------------------------------------------------------------------ */
-/* Oeffentliche Schnittstelle                                          */
-/* ------------------------------------------------------------------ */
+/* --- Oeffentliche Schnittstelle --- */
 
 calc_status_t calc_eval(const char *expr, int32_t *result)
 {
@@ -203,9 +183,7 @@ calc_status_t calc_eval(const char *expr, int32_t *result)
 
     skip_spaces(&p);
 
-    /* Ein Zeilenende oder eine Ziffer an dieser Stelle bedeutet, dass der
-     * Ausdruck nicht dem Muster "Zahl Operator Zahl" entspricht. Jedes
-     * andere Zeichen ist ein nicht unterstuetzter Operator. */
+    /* Zeilenende oder Ziffer -> Muster verletzt; sonst unbekannter Operator. */
     if (*p == '\0' || is_digit(*p)) {
         return CALC_ERR_SYNTAX;
     }
@@ -252,9 +230,7 @@ size_t calc_format(char *out, size_t out_sz, const char *expr,
     }
 
     if (status == CALC_OK) {
-        /* "<Ausdruck> = <Ergebnis>". Der Ausdruck wird dabei von fuehrendem
-         * und abschliessendem Leerraum befreit, damit die Antwortzeile
-         * unabhaengig von der Formatierung der Anfrage einheitlich aussieht. */
+        /* "<Ausdruck> = <Ergebnis>", Ausdruck ohne Rand-Leerraum. */
         const char *begin = (expr != 0) ? expr : "";
         const char *end;
 

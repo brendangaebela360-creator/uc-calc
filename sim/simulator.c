@@ -1,28 +1,12 @@
 /*
- * simulator.c - PC-seitiger Simulator der Firmware.
+ * simulator.c - Simulator der Firmware fuer Systemtests ohne Hardware.
  *
- * Der Simulator bildet die Hauptschleife der Firmware nach, verwendet dabei
- * aber denselben Rechenkern calc_core und spricht statt des USART ein
- * virtuelles Terminalpaar (PTY) an. Die PC-Anwendung kann sich damit
- * verbinden, als haenge ein Arduino am Rechner.
+ * Gleiche Hauptschleife und derselbe Rechenkern wie die Firmware, statt
+ * USART aber ein virtuelles Terminalpaar (PTY). Ein PTY kennt kein DTR, der
+ * Verbindungsaufbau ist auf der Master-Seite nicht erkennbar: Die Begruessung
+ * wird deshalb alle 250 ms wiederholt, bis das erste Zeichen eintrifft.
  *
- * Zweck: Systemtests der vollstaendigen Kette ohne angeschlossene Hardware.
- * Da Zeilenerkennung und Fehlerbehandlung mit der Firmware uebereinstimmen,
- * pruefen diese Tests dieselbe Logik, die spaeter auf dem Controller laeuft.
- *
- * Nachbildung des Resets: Der echte Arduino wird beim Oeffnen des Ports
- * durch das DTR-Signal zurueckgesetzt und meldet sich anschliessend mit
- * "READY uc-calc 1.0". Ein PTY kennt kein DTR, und der Zeitpunkt des
- * Verbindungsaufbaus laesst sich auf der Master-Seite nicht zuverlaessig
- * erkennen. Der Simulator wiederholt seine Begruessung deshalb im Abstand
- * von 250 ms, solange noch kein Zeichen eingetroffen ist. Die PC-Anwendung
- * ist entsprechend so ausgelegt, dass sie unaufgeforderte READY-Zeilen
- * jederzeit ueberliest - eine Eigenschaft, die auch an realer Hardware
- * nuetzlich ist, weil sich das Board jederzeit zuruecksetzen kann.
- *
- * Aufruf:  ./uc-calc-sim
- * Der Simulator gibt den Geraetenamen aus, den die PC-Anwendung mit
- * --port erhaelt.
+ * Aufruf: ./uc-calc-sim - gibt den Geraetenamen fuer --port aus.
  */
 
 #define _XOPEN_SOURCE 600
@@ -112,10 +96,8 @@ int main(void)
         return 1;
     }
 
-    /* Die Leitungsdisziplin des PTY muss in den Rohmodus geschaltet werden.
-     * Andernfalls wuerde das Terminal jedes gesendete Zeichen zurueckwerfen
-     * (ECHO) und der Simulator empfinge seine eigene Ausgabe als Anfrage.
-     * Eine echte UART-Verbindung kennt diesen Mechanismus nicht. */
+    /* Rohmodus: sonst wirft das Terminal jedes Zeichen zurueck (ECHO) und
+     * der Simulator empfaengt seine eigene Ausgabe als Anfrage. */
     {
         struct termios tty;
         if (tcgetattr(master, &tty) == 0) {
@@ -146,9 +128,7 @@ int main(void)
 
         n = read(master, &c, 1);
         if (n <= 0) {
-            /* EIO bedeutet, dass die Gegenseite den Port geschlossen hat.
-             * Das entspricht dem Abziehen des Boards: Beim naechsten
-             * Verbindungsaufbau beginnt wieder die Begruessungsphase. */
+            /* EIO: Gegenseite hat den Port geschlossen - wieder begruessen. */
             if (n < 0 && errno == EIO) {
                 greeting = 1;
                 len      = 0;

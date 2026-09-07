@@ -1,14 +1,8 @@
 /*
- * uart.c - Implementierung des UART-Treibers fuer den ATmega328P.
+ * uart.c - UART-Treiber fuer den ATmega328P.
  *
- * Baudratenberechnung (Datenblatt, Abschnitt USART, Normalmodus):
- *
- *     UBRR0 = F_CPU / (16 * BAUD) - 1
- *           = 16000000 / (16 * 9600) - 1
- *           = 103,17  ->  103
- *
- * Die tatsaechliche Baudrate betraegt damit 9615 Baud, der Fehler liegt
- * bei 0,2 Prozent und somit deutlich unter der zulaessigen Grenze.
+ * UBRR0 = F_CPU / (16 * BAUD) - 1 = 16000000 / (16 * 9600) - 1 = 103,17 -> 103.
+ * Ergibt 9615 Baud, also 0,2 Prozent Abweichung.
  */
 
 #include <avr/io.h>
@@ -24,9 +18,7 @@
 #define UART_BAUD 9600UL
 #define UART_UBRR ((F_CPU / (16UL * UART_BAUD)) - 1UL)
 
-/* Ringpuffer. head wird ausschliesslich in der ISR veraendert,
- * tail ausschliesslich im Hauptprogramm. Beide Indizes sind volatile,
- * da sie zwischen Interrupt- und Hauptkontext geteilt werden. */
+/* head nur in der ISR, tail nur im Hauptprogramm - beide volatile. */
 static volatile char    rx_buffer[UART_RX_BUFFER_SIZE];
 static volatile uint8_t rx_head = 0;
 static volatile uint8_t rx_tail = 0;
@@ -45,8 +37,7 @@ void uart_init(void)
     UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
 }
 
-/* Empfangsinterrupt: Ein Zeichen wurde vollstaendig empfangen.
- * Die Routine bleibt bewusst kurz - sie legt das Zeichen lediglich ab. */
+/* Empfangsinterrupt: legt das Zeichen nur ab, sonst nichts. */
 ISR(USART_RX_vect)
 {
     char c = (char)UDR0;
@@ -66,7 +57,7 @@ uint8_t uart_get(char *out)
 {
     uint8_t available;
 
-    /* Der Vergleich der beiden Indizes muss unterbrechungsfrei erfolgen. */
+    /* Indexvergleich muss unterbrechungsfrei sein. */
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         available = (uint8_t)(rx_head != rx_tail);
         if (available) {
@@ -80,7 +71,7 @@ uint8_t uart_get(char *out)
 
 void uart_put(char c)
 {
-    /* Warten, bis das Senderegister wieder aufnahmebereit ist. */
+    /* Warten auf UDRE0. */
     while (!(UCSR0A & (1 << UDRE0))) {
         /* aktives Warten */
     }
