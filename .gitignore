@@ -1,5 +1,6 @@
 build/
-*.o
 *.elf
 *.hex
+*.o
 session.log
+.DS_Store
