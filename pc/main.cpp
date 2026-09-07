@@ -1,17 +1,11 @@
 /*
  * main.cpp - Ablaufsteuerung der PC-Anwendung.
  *
- * Aufruf:
  *   uc-calc-pc --port <Geraet> [--log <Datei>] [--batch <Datei>]
  *
- * Ohne --batch laeuft die Anwendung interaktiv: Der Benutzer gibt Ausdruecke
- * ein, die Antwort des Mikrocontrollers wird angezeigt. "quit" beendet das
- * Programm. Mit --batch werden die Zeilen einer Datei nacheinander gesendet;
- * das erlaubt reproduzierbare Testlaeufe.
- *
- * Vor der ersten Anfrage wartet die Anwendung auf die Begruessungszeile
- * "READY ...". Damit ist der Reset abgefangen, den das DTR-Signal beim
- * Oeffnen des Ports auf dem Arduino ausloest.
+ * Interaktiv oder, mit --batch, zeilenweise aus einer Datei. Vor der ersten
+ * Anfrage wird die Begruessungszeile "READY ..." abgewartet; damit ist der
+ * DTR-Reset beim Oeffnen des Ports abgefangen.
  */
 
 #include <chrono>
@@ -41,8 +35,7 @@ void printUsage(const char* program)
               << "Beispiel: " << program << " --port /dev/ttyACM0\n";
 }
 
-/* Wertet die Kommandozeile aus. Gibt false zurueck, wenn der Aufruf
- * unvollstaendig oder fehlerhaft ist. */
+/* false bei unvollstaendigem oder fehlerhaftem Aufruf. */
 bool parseArguments(int argc, char** argv, Options& options)
 {
     for (int i = 1; i < argc; ++i) {
@@ -85,10 +78,9 @@ bool awaitReady(SerialPort& port, MessageLog& log)
 
 /* Sendet einen Ausdruck und gibt die Antwort aus.
  *
- * Unaufgeforderte READY-Zeilen werden ueberlesen: Das Board kann sich
- * jederzeit zuruecksetzen, etwa durch einen Spannungseinbruch oder durch
- * ein erneutes Oeffnen des Ports. Eine solche Zeile ist keine Antwort auf
- * die Anfrage und darf die Zuordnung nicht verschieben. */
+ * Unaufgeforderte READY-Zeilen werden ueberlesen - das Board kann sich
+ * jederzeit zuruecksetzen, und eine solche Zeile wuerde sonst die Zuordnung
+ * von Anfrage und Antwort verschieben. */
 void exchange(SerialPort& port, MessageLog& log, const std::string& request)
 {
     port.writeLine(request);
@@ -111,12 +103,12 @@ void exchange(SerialPort& port, MessageLog& log, const std::string& request)
             continue;
         }
 
-        std::cout << *reply << '\n';
+        std::cout << *reply << std::endl;
         return;
     }
 
     log.note("Zeitueberschreitung nach Anfrage: " + request);
-    std::cout << "Keine Antwort innerhalb des Zeitfensters.\n";
+    std::cout << "Keine Antwort innerhalb des Zeitfensters." << std::endl;
 }
 
 /* Liest die Ausdruecke einer Batchdatei ein. */
@@ -171,13 +163,19 @@ int main(int argc, char** argv)
         std::cout << "Ausdruecke im Format \"Zahl Operator Zahl\" eingeben, "
                      "\"quit\" beendet.\n";
         std::string request;
-        while (std::cout << "> " && std::getline(std::cin, request)) {
+        for (;;) {
+            std::cout << "> " << std::flush;
+
+            if (!std::getline(std::cin, request)) {
+                break;                  /* Eingabe beendet */
+            }
             if (request == "quit" || request == "exit") {
-                break;
+                break;                  /* lokal, nicht an den uC senden */
             }
             if (request.empty()) {
                 continue;
             }
+
             exchange(port, log, request);
         }
         std::cout << '\n';
